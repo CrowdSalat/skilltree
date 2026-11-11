@@ -1,74 +1,74 @@
 Cloud-Native & Platforms
   Base Containers
-    LXD containers
-    Podman
-    Docker
-    Buildah
-    Skopeo
+    LXD containers | Linux system container manager. Focuses on full OS containers rather than application microservices.
+    Podman | Daemonless, rootless container engine. Red Hat standard drop-in replacement for Docker.
+    Docker | Ubiquitous container engine and image format for packaging and running microservices.
+    Buildah | Specialized tool for building OCI container images without needing a full daemon or root privileges.
+    Skopeo | Utility for inspecting, copying, and signing container images directly between registries without local pulls.
   Orchestration
-    Kubernetes / K8s
-    Helm
-    Kustomize
+    Kubernetes / K8s | De facto standard container orchestrator managing deployments, scaling, and networking across clusters.
+    Helm | Kubernetes package manager using templated charts for reusable multi-resource deployments.
+    Kustomize | Template-free declarative configuration manager built directly into kubectl.
   Enterprise Platforms
-    ArgoCD GitOps
-    Tekton Pipelines
-    Service Mesh Istio
-    Prometheus / Grafana / Loki / Tempo
-    Red Hat Developer Hub / Backstage
-    Red Hat Devspaces / Eclipse Che
-    Red Hat Trusted Artifact Signer
-    Red Hat Trusted Profile Analyzer
-    Red Hat Quay
+    ArgoCD GitOps | Declarative continuous delivery using Git repositories as the source of truth (upstream of Red Hat OpenShift GitOps).
+    Tekton Pipelines | Kubernetes-native CI/CD pipeline engine running stages as pods (upstream of Red Hat OpenShift Pipelines).
+    Service Mesh Istio | Microservice traffic management, mTLS security, and telemetry (upstream of Red Hat OpenShift Service Mesh).
+    Prometheus / Grafana / Loki / Tempo | Standard cloud-native observability stack for metrics, dashboards, logs, and distributed tracing.
+    Red Hat Developer Hub / Backstage | Internal Developer Platform (IDP) providing self-service catalogs, software templates, and golden paths.
+    Red Hat Devspaces / Eclipse Che | In-browser cloud development environments running containerized IDEs directly on OpenShift.
+    Red Hat Trusted Artifact Signer | Cryptographic code and container image signing (Sigstore) ensuring software supply chain integrity.
+    Red Hat Trusted Profile Analyzer | Vulnerability and SBOM management platform determining actual exploitability in application code.
+    Red Hat Quay | Enterprise container registry featuring automated Clair vulnerability security scanning and geo-replication.
 Application Runtimes
   Java & JVM
-    Java SE / Maven
-    Spring Boot / Hibernate
-    Quarkus / GraalVM
-    Jakarta EE / JBoss EAP / Wildfly / WebLogic / WebSphere
+    Java SE / Maven | Core Java programming fundamentals, OOP principles, and standard project build/dependency management.
+    Spring Boot / Hibernate | Mainstream enterprise Java framework and JPA/ORM persistence layer for standard backend microservices.
+    Quarkus / GraalVM | "Supersonic Subatomic Java" optimized for Kubernetes, instant cold-starts, low RAM, and native compilation. Flagship modern Red Hat runtime.
+    Jakarta EE / JBoss EAP / Wildfly / WebLogic / WebSphere | Traditional enterprise application servers. Signals legacy enterprise systems experience and migration readiness.
   Go (Golang)
-    Operator SDK / Controllers
-    client-go / KubeBuilder
-    Gin / Fiber / gRPC
-    Cobra CLI / Go Modules
+    Operator SDK / Controllers | Framework for developing Kubernetes Operators to automate application operations inside OpenShift/K8s clusters.
+    client-go / KubeBuilder | Core libraries for programmatically interacting with the Kubernetes API to build custom controllers.
+    Gin / Fiber / gRPC | High-throughput, low-latency Go microservice frameworks and binary RPC communication protocols.
+    Cobra CLI / Go Modules | Tooling for building modern command-line applications (like oc or kubectl) and modern Go dependency management.
   Python
-    FastAPI / Pydantic
-    LangChain / OpenShift AI
-    Jupyter Notebook / Jupyterlab
-    Celery / AsyncIO
-    Pytest / Poetry
+    FastAPI / Pydantic | Modern async Python microservice framework with automatic OpenAPI documentation and strict data validation.
+    LangChain / OpenShift AI | Frameworks for integrating LLMs into apps and deploying AI/ML workloads on Red Hat OpenShift AI (RHOAI).
+    Jupyter Notebook / Jupyterlab | Interactive notebooks used by data scientists and developers to prototype data models and AI pipelines.
+    Celery / AsyncIO | Distributed task queues and async event loops for asynchronous backend background processing.
+    Pytest / Poetry | Modern Python automated test suite and deterministic dependency/package management.
   TypeScript & Node
-    NestJS / Express
-    Backstage / RHDH Plugins
-    React / Next.js
+    NestJS / Express | Server-side TypeScript/Node.js frameworks. NestJS brings Spring-like architectural structure to TypeScript.
+    Backstage / RHDH Plugins | Custom plugin development for Developer Portals (Red Hat Developer Hub); platform engineering skill.
+    React / Next.js | Modern web UI library and SSR framework for building customer-facing interfaces and developer portals.
 Integration & Messaging
   APIs & Formats
-    GraphQL
-    REST / OpenAPI
-    gRPC
+    GraphQL | API query language allowing clients to request precisely the data fields needed from multiple backend sources.
+    REST / OpenAPI | Industry standard HTTP API design principles and machine-readable contract documentation.
+    gRPC | High-performance, binary RPC communication built on Protocol Buffers and HTTP/2 for inter-service communication.
   Message Brokers / Event Streaming
-    ActiveMQ / AMQ
-    RabbitMQ
-    Kafka / AMQ Streams / Strimzi
-    Debezium
+    ActiveMQ / AMQ | Classic enterprise message broker supporting JMS queues and message ordering (Red Hat AMQ Broker).
+    RabbitMQ | Lightweight, popular message broker supporting AMQP routing and pub/sub patterns.
+    Kafka / AMQ Streams / Strimzi | High-throughput distributed event streaming platform managed on K8s via Strimzi (Red Hat AMQ Streams).
+    Debezium | Distributed Change Data Capture (CDC) platform capturing real-time row-level database changes into Kafka.
   Enterprise Integration
-    Keycloak
-    Apache Camel
-    Camel K
-    3scale
+    Keycloak | Open-source Identity & Access Management (IAM) for OAuth2, OIDC, and SSO (Red Hat build of Keycloak).
+    Apache Camel | Enterprise Integration Patterns (EIP) framework connecting hundreds of disparate technologies and legacy systems.
+    Camel K | Lightweight, serverless-ready Camel integration runtime designed to run natively and instantly on Kubernetes.
+    3scale | Red Hat API management platform for securing, rate-limiting, and managing developer access to APIs.
 Testing & Reliability
   Unit & Core
-    JUnit 5 / Jest
-    Mockito 
-    Selenium / playwright
+    JUnit 5 / Jest | Standard unit testing frameworks for Java (JUnit 5) and JavaScript/TypeScript (Jest).
+    Mockito | Dominant Java mocking framework for isolating and testing individual units of code.
+    Selenium / playwright | Headless browser automation frameworks for end-to-end (E2E) UI and user journey testing.
   Integration & Containers
-    Testcontainers
-    REST-Assured
-    WireMock
+    Testcontainers | Spins up real, disposable containers (databases, Kafka, Keycloak) inside integration tests. Strong cloud-native signal.
+    REST-Assured | Fluent Java DSL for testing and validating HTTP/REST endpoints.
+    WireMock | HTTP mock server for stubbing external web services and third-party APIs during integration testing.
   Architecture & Contract
-    ArchUnit
-    Pact / Microcks
-    Cucumber
+    ArchUnit | Java testing library that enforces package structure, layer boundaries, and coding conventions via unit tests.
+    Pact / Microcks | Consumer-driven contract testing and API simulation ensuring microservices do not break each other's contracts.
+    Cucumber | Behavior-Driven Development (BDD) testing tool using Gherkin plain-text syntax.
   Performance Testing
-    Gatling
-    k6
-    JMeter
+    Gatling | High-performance load and stress testing tool written as code for HTTP and web applications.
+    k6 | Modern, developer-friendly load testing tool with test scripts written in JavaScript.
+    JMeter | Established Apache performance and load testing tool widely used across enterprise organizations.

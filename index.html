@@ -260,7 +260,6 @@
     }
 
     /* Highlight States */
-    /* 1. Directly Matched Node */
     .node.is-match .node-bg {
       fill: #064e3b !important;
       stroke: #10b981 !important;
@@ -274,7 +273,6 @@
       fill: #34d399 !important;
     }
 
-    /* 2. Ancestral Lineage Node */
     .node.is-path .node-bg {
       fill: #0c4a6e !important;
       stroke: #38bdf8 !important;
@@ -288,7 +286,6 @@
       fill: #38bdf8 !important;
     }
 
-    /* 3. Balanced Contrast for Non-Selected Nodes */
     .tree-dimmed .node:not(.is-match):not(.is-path) {
       opacity: 0.65;
     }
@@ -297,6 +294,40 @@
     }
     .tree-dimmed .link:not(.is-path) {
       opacity: 0.4;
+    }
+
+    /* Floating Hover Overlay Tooltip */
+    .skill-tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid #334155;
+      padding: 0.55rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      max-width: 320px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.65);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 100;
+    }
+
+    .skill-tooltip.is-visible {
+      opacity: 1;
+    }
+
+    .skill-tooltip-title {
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 0.25rem;
+      font-size: 0.82rem;
+    }
+
+    .skill-tooltip-desc {
+      color: #cbd5e1;
     }
   </style>
 </head>
@@ -333,6 +364,12 @@
     <svg id="tree-svg"></svg>
   </div>
 
+  <!-- Hover Tooltip Element -->
+  <div id="skill-tooltip" class="skill-tooltip">
+    <div id="tooltip-title" class="skill-tooltip-title"></div>
+    <div id="tooltip-desc" class="skill-tooltip-desc"></div>
+  </div>
+
   <script>
     // -------------------------------------------------------------
     // Fallback embedded taxonomy (used if skills.txt is blocked or absent)
@@ -340,79 +377,89 @@
     const DEFAULT_SKILLS_CONFIG = `
 Cloud-Native & Platforms
   Base Containers
-    Linux CLI
-    Podman
-    Docker
+    LXD containers | Linux system container manager. Focuses on full OS containers rather than application microservices.
+    Podman | Daemonless, rootless container engine. Red Hat standard drop-in replacement for Docker.
+    Docker | Ubiquitous container engine and image format for packaging and running microservices.
+    Buildah | Specialized tool for building OCI container images without needing a full daemon or root privileges.
+    Skopeo | Utility for inspecting, copying, and signing container images directly between registries without local pulls.
   Orchestration
-    Kubernetes
-    Helm
-    Kustomize
+    Kubernetes / K8s | De facto standard container orchestrator managing deployments, scaling, and networking across clusters.
+    Helm | Kubernetes package manager using templated charts for reusable multi-resource deployments.
+    Kustomize | Template-free declarative configuration manager built directly into kubectl.
   Enterprise Platforms
-    OpenShift
-    ArgoCD GitOps
-    Tekton Pipelines
-    Service Mesh Istio
+    ArgoCD GitOps | Declarative continuous delivery using Git repositories as the source of truth (upstream of Red Hat OpenShift GitOps).
+    Tekton Pipelines | Kubernetes-native CI/CD pipeline engine running stages as pods (upstream of Red Hat OpenShift Pipelines).
+    Service Mesh Istio | Microservice traffic management, mTLS security, and telemetry (upstream of Red Hat OpenShift Service Mesh).
+    Prometheus / Grafana / Loki / Tempo | Standard cloud-native observability stack for metrics, dashboards, logs, and distributed tracing.
+    Red Hat Developer Hub / Backstage | Internal Developer Platform (IDP) providing self-service catalogs, software templates, and golden paths.
+    Red Hat Devspaces / Eclipse Che | In-browser cloud development environments running containerized IDEs directly on OpenShift.
+    Red Hat Trusted Artifact Signer | Cryptographic code and container image signing (Sigstore) ensuring software supply chain integrity.
+    Red Hat Trusted Profile Analyzer | Vulnerability and SBOM management platform determining actual exploitability in application code.
+    Red Hat Quay | Enterprise container registry featuring automated Clair vulnerability security scanning and geo-replication.
 Application Runtimes
   Java & JVM
-    Java SE / Maven
-    Spring Boot / Hibernate
-    Quarkus / GraalVM
-    Jakarta EE / JBoss EAP
+    Java SE / Maven | Core Java programming fundamentals, OOP principles, and standard project build/dependency management.
+    Spring Boot / Hibernate | Mainstream enterprise Java framework and JPA/ORM persistence layer for standard backend microservices.
+    Quarkus / GraalVM | "Supersonic Subatomic Java" optimized for Kubernetes, instant cold-starts, low RAM, and native compilation. Flagship modern Red Hat runtime.
+    Jakarta EE / JBoss EAP / Wildfly / WebLogic / WebSphere | Traditional enterprise application servers. Signals legacy enterprise systems experience and migration readiness.
   Go (Golang)
-    Operator SDK / Controllers
-    client-go / KubeBuilder
-    Gin / Fiber / gRPC
-    Cobra CLI / Go Modules
+    Operator SDK / Controllers | Framework for developing Kubernetes Operators to automate application operations inside OpenShift/K8s clusters.
+    client-go / KubeBuilder | Core libraries for programmatically interacting with the Kubernetes API to build custom controllers.
+    Gin / Fiber / gRPC | High-throughput, low-latency Go microservice frameworks and binary RPC communication protocols.
+    Cobra CLI / Go Modules | Tooling for building modern command-line applications (like oc or kubectl) and modern Go dependency management.
   Python
-    FastAPI / Pydantic
-    LangChain / OpenShift AI
-    Celery / AsyncIO
-    Pytest / Poetry
+    FastAPI / Pydantic | Modern async Python microservice framework with automatic OpenAPI documentation and strict data validation.
+    LangChain / OpenShift AI | Frameworks for integrating LLMs into apps and deploying AI/ML workloads on Red Hat OpenShift AI (RHOAI).
+    Jupyter Notebook / Jupyterlab | Interactive notebooks used by data scientists and developers to prototype data models and AI pipelines.
+    Celery / AsyncIO | Distributed task queues and async event loops for asynchronous backend background processing.
+    Pytest / Poetry | Modern Python automated test suite and deterministic dependency/package management.
   TypeScript & Node
-    NestJS / Express
-    Backstage / RHDH Plugins
-    React / Next.js
-    GraphQL / REST APIs
+    NestJS / Express | Server-side TypeScript/Node.js frameworks. NestJS brings Spring-like architectural structure to TypeScript.
+    Backstage / RHDH Plugins | Custom plugin development for Developer Portals (Red Hat Developer Hub); platform engineering skill.
+    React / Next.js | Modern web UI library and SSR framework for building customer-facing interfaces and developer portals.
 Integration & Messaging
   APIs & Formats
-    REST / OpenAPI
-    gRPC
-  Message Brokers
-    ActiveMQ / AMQ
-    RabbitMQ
-  Event Streaming
-    Kafka
-    AMQ Streams
-    Debezium
+    GraphQL | API query language allowing clients to request precisely the data fields needed from multiple backend sources.
+    REST / OpenAPI | Industry standard HTTP API design principles and machine-readable contract documentation.
+    gRPC | High-performance, binary RPC communication built on Protocol Buffers and HTTP/2 for inter-service communication.
+  Message Brokers / Event Streaming
+    ActiveMQ / AMQ | Classic enterprise message broker supporting JMS queues and message ordering (Red Hat AMQ Broker).
+    RabbitMQ | Lightweight, popular message broker supporting AMQP routing and pub/sub patterns.
+    Kafka / AMQ Streams / Strimzi | High-throughput distributed event streaming platform managed on K8s via Strimzi (Red Hat AMQ Streams).
+    Debezium | Distributed Change Data Capture (CDC) platform capturing real-time row-level database changes into Kafka.
   Enterprise Integration
-    Apache Camel
-    Camel K
+    Keycloak | Open-source Identity & Access Management (IAM) for OAuth2, OIDC, and SSO (Red Hat build of Keycloak).
+    Apache Camel | Enterprise Integration Patterns (EIP) framework connecting hundreds of disparate technologies and legacy systems.
+    Camel K | Lightweight, serverless-ready Camel integration runtime designed to run natively and instantly on Kubernetes.
+    3scale | Red Hat API management platform for securing, rate-limiting, and managing developer access to APIs.
 Testing & Reliability
   Unit & Core
-    JUnit 5
-    Mockito
-    AssertJ
+    JUnit 5 / Jest | Standard unit testing frameworks for Java (JUnit 5) and JavaScript/TypeScript (Jest).
+    Mockito | Dominant Java mocking framework for isolating and testing individual units of code.
+    Selenium / playwright | Headless browser automation frameworks for end-to-end (E2E) UI and user journey testing.
   Integration & Containers
-    Testcontainers
-    REST-Assured
-    WireMock
+    Testcontainers | Spins up real, disposable containers (databases, Kafka, Keycloak) inside integration tests. Strong cloud-native signal.
+    REST-Assured | Fluent Java DSL for testing and validating HTTP/REST endpoints.
+    WireMock | HTTP mock server for stubbing external web services and third-party APIs during integration testing.
   Architecture & Contract
-    ArchUnit
-    Pact
+    ArchUnit | Java testing library that enforces package structure, layer boundaries, and coding conventions via unit tests.
+    Pact / Microcks | Consumer-driven contract testing and API simulation ensuring microservices do not break each other's contracts.
+    Cucumber | Behavior-Driven Development (BDD) testing tool using Gherkin plain-text syntax.
   Performance Testing
-    Gatling
-    k6
+    Gatling | High-performance load and stress testing tool written as code for HTTP and web applications.
+    k6 | Modern, developer-friendly load testing tool with test scripts written in JavaScript.
+    JMeter | Established Apache performance and load testing tool widely used across enterprise organizations.
 `;
 
-    // Active configuration text in use
     let activeTaxonomyText = DEFAULT_SKILLS_CONFIG;
 
     // -------------------------------------------------------------
     // Hierarchy Parser: Indented Text -> Tree Data Structure
+    // Supports "Skill Name | Description" format
     // -------------------------------------------------------------
     function parseIndentedTree(text, rootLabel = "Skills") {
       const lines = text.split('\n').filter(line => line.trim().length > 0);
-      const root = { name: rootLabel, children: [], level: -1, id: "root" };
+      const root = { name: rootLabel, children: [], level: -1, id: "root", description: null };
       const stack = [root];
       let idSequence = 1;
 
@@ -420,12 +467,18 @@ Testing & Reliability
         const indentMatch = line.match(/^(\s*)/);
         const indent = indentMatch ? indentMatch[1].length : 0;
         const level = Math.floor(indent / 2);
-        const name = line.trim();
+        
+        // Split name and optional description by '|'
+        const rawContent = line.trim();
+        const parts = rawContent.split(/\s*\|\s*/);
+        const name = parts[0].trim();
+        const description = parts.length > 1 ? parts.slice(1).join(' | ').trim() : null;
 
         const node = {
           id: 'node_' + (idSequence++),
           name: name,
           cleanName: name.toLowerCase(),
+          description: description,
           level: level,
           children: []
         };
@@ -454,19 +507,19 @@ Testing & Reliability
     const layoutToggleBtn = document.getElementById("layout-toggle");
     const layoutToggleText = document.getElementById("layout-toggle-text");
 
+    const tooltipEl = document.getElementById("skill-tooltip");
+    const tooltipTitle = document.getElementById("tooltip-title");
+    const tooltipDesc = document.getElementById("tooltip-desc");
+
     let allNodes = [], allLinks = [];
     let nodeSelection, linkSelection;
     let zoomBehavior, treeGroup;
 
-    // Active multi-skill filters & display states
     const activeFilters = new Set();
     let isCollapseActive = false;
-    let layoutPreference = 'auto'; // 'auto' | 'grid' (2 rows) | 'single' (1 row)
+    let layoutPreference = 'auto';
     let currentUseGrid = true;
 
-    // -------------------------------------------------------------
-    // Tree Pruning Logic: Keeps only selected skills & their lineages
-    // -------------------------------------------------------------
     function getActiveSearchTerms() {
       const liveQuery = searchInput.value.trim().toLowerCase();
       const searchTerms = new Set(activeFilters);
@@ -503,6 +556,23 @@ Testing & Reliability
       return null;
     }
 
+    function positionTooltip(event) {
+      const pad = 14;
+      let left = event.clientX + pad;
+      let top = event.clientY + pad;
+
+      const ttRect = tooltipEl.getBoundingClientRect();
+      if (left + ttRect.width > window.innerWidth - 12) {
+        left = event.clientX - ttRect.width - pad;
+      }
+      if (top + ttRect.height > window.innerHeight - 12) {
+        top = event.clientY - ttRect.height - pad;
+      }
+
+      tooltipEl.style.left = `${Math.max(10, left)}px`;
+      tooltipEl.style.top = `${Math.max(10, top)}px`;
+    }
+
     function renderTree(animate = false) {
       svg.selectAll("*").remove();
       allNodes = [];
@@ -524,7 +594,6 @@ Testing & Reliability
       const domainDataList = treeSource.children || [];
       if (domainDataList.length === 0) return;
 
-      // Determine 2-row (monitor) vs 1-row (mobile) layout
       const isMonitor = window.innerWidth >= 960 && (window.innerWidth / window.innerHeight) >= 0.95;
       if (layoutPreference === 'grid') {
         currentUseGrid = true;
@@ -534,23 +603,21 @@ Testing & Reliability
         currentUseGrid = isMonitor && domainDataList.length > 1;
       }
 
-      // Create primary zoomable group
       treeGroup = svg.append("g").attr("class", "tree-group");
 
       zoomBehavior = d3.zoom()
         .scaleExtent([0.3, 2.5])
         .on("zoom", (event) => {
           treeGroup.attr("transform", event.transform);
+          tooltipEl.classList.remove("is-visible");
         });
 
       svg.call(zoomBehavior);
       svg.on("dblclick.zoom", null);
       svg.on("dblclick", () => fitAndCenter(true));
 
-      // Temporary element to measure label text widths
       const tempGroup = svg.append("g").attr("class", "temp-measure").style("visibility", "hidden");
 
-      // Layout each domain tree individually
       const domainsLayout = domainDataList.map(domainData => {
         const h = d3.hierarchy(domainData);
 
@@ -568,7 +635,6 @@ Testing & Reliability
 
         d3Tree(h);
 
-        // Measure text & badge dimensions
         h.descendants().forEach(d => {
           const tempText = tempGroup.append("text")
             .attr("font-size", "11px")
@@ -577,7 +643,6 @@ Testing & Reliability
           d.badgeWidth = Math.round(d.textWidth + 20);
         });
 
-        // Compute horizontal column offsets by depth
         const depthMaxWidth = {};
         h.descendants().forEach(d => {
           depthMaxWidth[d.depth] = Math.max(depthMaxWidth[d.depth] || 0, d.badgeWidth);
@@ -604,7 +669,6 @@ Testing & Reliability
 
       tempGroup.remove();
 
-      // Position domains in grid (2 rows for monitor) or single column (1 row for mobile)
       const gapX = 55;
       const gapY = 32;
 
@@ -645,7 +709,6 @@ Testing & Reliability
         });
       }
 
-      // Merge transformed nodes and links
       domainsLayout.forEach(item => {
         item.hierarchy.descendants().forEach(d => {
           d.y += item.offsetX;
@@ -655,7 +718,6 @@ Testing & Reliability
         allLinks.push(...item.hierarchy.links());
       });
 
-      // Connector Links
       function horizontalLink(d) {
         const startX = d.source.y + (d.source.badgeWidth - 3);
         const startY = d.source.x;
@@ -672,7 +734,6 @@ Testing & Reliability
         .attr("class", "link")
         .attr("d", horizontalLink);
 
-      // Node groups
       nodeSelection = treeGroup.selectAll(".node")
         .data(allNodes)
         .enter()
@@ -680,7 +741,6 @@ Testing & Reliability
         .attr("class", d => `node level-${d.depth}`)
         .attr("transform", d => `translate(${d.y},${d.x})`);
 
-      // Node pill background
       nodeSelection.append("rect")
         .attr("class", "node-bg")
         .attr("x", -3)
@@ -688,33 +748,48 @@ Testing & Reliability
         .attr("width", d => d.badgeWidth)
         .attr("height", 20);
 
-      // Node anchor dot
       nodeSelection.append("circle")
         .attr("class", "node-dot")
         .attr("cx", 4)
         .attr("cy", 0)
         .attr("r", 2);
 
-      // Node text label
       nodeSelection.append("text")
         .attr("class", "node-text")
         .attr("x", 12)
         .attr("y", 0)
         .text(d => d.data.name);
 
-      // Node click toggles filter
+      // Node Interaction: Click toggles filter
       nodeSelection.on("click", (event, d) => {
         event.stopPropagation();
+        tooltipEl.classList.remove("is-visible");
         toggleFilter(d.data.name);
       });
+
+      // Hover Overlay for Descriptions
+      nodeSelection
+        .on("mouseenter", (event, d) => {
+          if (d.data.description) {
+            tooltipTitle.textContent = d.data.name;
+            tooltipDesc.textContent = d.data.description;
+            tooltipEl.classList.add("is-visible");
+            positionTooltip(event);
+          }
+        })
+        .on("mousemove", (event, d) => {
+          if (d.data.description) {
+            positionTooltip(event);
+          }
+        })
+        .on("mouseleave", () => {
+          tooltipEl.classList.remove("is-visible");
+        });
 
       fitAndCenter(animate);
       updateToggleUI();
     }
 
-    // -------------------------------------------------------------
-    // Recenter & Fit Diagram in Viewport
-    // -------------------------------------------------------------
     function fitAndCenter(animate = false) {
       if (!allNodes || allNodes.length === 0) return;
 
@@ -731,7 +806,6 @@ Testing & Reliability
       const vpWidth = window.innerWidth;
       const vpHeight = window.innerHeight;
 
-      // Spacing around edges and below the floating search bar
       const padTop = 85;
       const padBottom = 45;
       const padLeft = 45;
@@ -766,9 +840,6 @@ Testing & Reliability
       }
     }
 
-    // -------------------------------------------------------------
-    // Filter Chips & Multi-Skill Highlighting Logic
-    // -------------------------------------------------------------
     function updateToggleUI() {
       const hasTokens = getActiveSearchTerms().size > 0;
       collapseBtn.classList.toggle("is-active", isCollapseActive && hasTokens);
@@ -921,7 +992,6 @@ Testing & Reliability
       applyHighlight();
     });
 
-    // Keyboard & input handlers
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === ",") {
         e.preventDefault();
@@ -953,7 +1023,6 @@ Testing & Reliability
       }
     });
 
-    // Responsive resize
     let resizeTimer;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
@@ -977,7 +1046,6 @@ Testing & Reliability
         }
       } catch (err) {
         // Silently caught on file:/// or when skills.txt is absent.
-        // Falls back to DEFAULT_SKILLS_CONFIG without console breakages.
       }
       renderTree();
     }
