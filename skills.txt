@@ -15,7 +15,7 @@ Cloud-Native & Platforms
     Service Mesh Istio
     Prometheus / Grafana / Loki / Tempo
     Red Hat Developer Hub / Backstage
-    Red Hat Devspaces
+    Red Hat Devspaces / Eclipse Che
     Red Hat Trusted Artifact Signer
     Red Hat Trusted Profile Analyzer
     Red Hat Quay
@@ -45,16 +45,16 @@ Integration & Messaging
     GraphQL
     REST / OpenAPI
     gRPC
-  Message Brokers
+  Message Brokers / Event Streaming
     ActiveMQ / AMQ
     RabbitMQ
-  Event Streaming
-    Kafka
-    AMQ Streams
+    Kafka / AMQ Streams / Strimzi
     Debezium
   Enterprise Integration
+    Keycloak
     Apache Camel
     Camel K
+    3scale
 Testing & Reliability
   Unit & Core
     JUnit 5 / Jest
