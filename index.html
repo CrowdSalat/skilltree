@@ -120,7 +120,7 @@
       color: #64748b;
     }
 
-    /* Search Controls: Collapse Toggle & Clear Button */
+    /* Search Controls: Layout & Collapse Toggles & Clear Button */
     .search-actions {
       display: flex;
       align-items: center;
@@ -160,7 +160,7 @@
       transition: all 0.2s ease;
     }
 
-    /* Active State (When Collapsed) */
+    /* Active State */
     .collapse-toggle-btn.is-active {
       background: rgba(56, 189, 248, 0.16);
       border-color: #38bdf8;
@@ -260,7 +260,7 @@
     }
 
     /* Highlight States */
-    /* 1. Directly Matched Node (Solid Emerald Pill, High Legibility) */
+    /* 1. Directly Matched Node */
     .node.is-match .node-bg {
       fill: #064e3b !important;
       stroke: #10b981 !important;
@@ -274,7 +274,7 @@
       fill: #34d399 !important;
     }
 
-    /* 2. Ancestral Lineage Node (Crisp Slate-Cyan Accent) */
+    /* 2. Ancestral Lineage Node */
     .node.is-path .node-bg {
       fill: #0c4a6e !important;
       stroke: #38bdf8 !important;
@@ -288,8 +288,7 @@
       fill: #38bdf8 !important;
     }
 
-    /* 3. Balanced Contrast for Non-Selected Nodes:
-          Remains fully legible (~65% opacity), brightens to 100% on hover */
+    /* 3. Balanced Contrast for Non-Selected Nodes */
     .tree-dimmed .node:not(.is-match):not(.is-path) {
       opacity: 0.65;
     }
@@ -316,6 +315,10 @@
         spellcheck="false"
       />
       <div class="search-actions">
+        <button id="layout-toggle" class="collapse-toggle-btn is-active" type="button" title="Toggle Layout (2 Rows / 1 Row)">
+          <span class="toggle-dot"></span>
+          <span id="layout-toggle-text">2 Rows</span>
+        </button>
         <button id="collapse-toggle" class="collapse-toggle-btn is-disabled" type="button" title="Select a skill to collapse">
           <span class="toggle-dot"></span>
           <span class="toggle-text">Collapse</span>
@@ -332,8 +335,7 @@
 
   <script>
     // -------------------------------------------------------------
-    // Easily configurable indented skill hierarchy
-    // (2 spaces per depth level)
+    // Fallback embedded taxonomy (used if skills.txt is blocked or absent)
     // -------------------------------------------------------------
     const DEFAULT_SKILLS_CONFIG = `
 Cloud-Native & Platforms
@@ -402,8 +404,8 @@ Testing & Reliability
     k6
 `;
 
-    // Active configuration text (loaded from skills.txt or defaults to inline)
-    let activeSkillsConfig = DEFAULT_SKILLS_CONFIG;
+    // Active configuration text in use
+    let activeTaxonomyText = DEFAULT_SKILLS_CONFIG;
 
     // -------------------------------------------------------------
     // Hierarchy Parser: Indented Text -> Tree Data Structure
@@ -449,14 +451,18 @@ Testing & Reliability
     const chipsContainer = document.getElementById("chips-container");
     const clearBtn = document.getElementById("clear-btn");
     const collapseBtn = document.getElementById("collapse-toggle");
+    const layoutToggleBtn = document.getElementById("layout-toggle");
+    const layoutToggleText = document.getElementById("layout-toggle-text");
 
-    let rootNode, allNodes, allLinks;
+    let allNodes = [], allLinks = [];
     let nodeSelection, linkSelection;
     let zoomBehavior, treeGroup;
 
-    // Active multi-skill filters & collapse state
+    // Active multi-skill filters & display states
     const activeFilters = new Set();
     let isCollapseActive = false;
+    let layoutPreference = 'auto'; // 'auto' | 'grid' (2 rows) | 'single' (1 row)
+    let currentUseGrid = true;
 
     // -------------------------------------------------------------
     // Tree Pruning Logic: Keeps only selected skills & their lineages
@@ -499,8 +505,10 @@ Testing & Reliability
 
     function renderTree(animate = false) {
       svg.selectAll("*").remove();
+      allNodes = [];
+      allLinks = [];
 
-      const rawTree = parseIndentedTree(activeSkillsConfig);
+      const rawTree = parseIndentedTree(activeTaxonomyText);
       const searchTerms = getActiveSearchTerms();
       const hasTokens = searchTerms.size > 0;
       const shouldCollapse = isCollapseActive && hasTokens;
@@ -513,30 +521,24 @@ Testing & Reliability
         }
       }
 
-      rootNode = d3.hierarchy(treeSource);
+      const domainDataList = treeSource.children || [];
+      if (domainDataList.length === 0) return;
 
-      // Count terminal leaves across domain roots to allocate vertical height
-      let leafCount = 0;
-      rootNode.each(d => {
-        if (d.depth > 0 && (!d.children || d.children.length === 0)) leafCount++;
-      });
-
-      // Compact spacing: when collapsed, rows nest right next to each other
-      const nodeVerticalGap = 24;
-      const calculatedHeight = Math.max(nodeVerticalGap * 2, leafCount * nodeVerticalGap);
-
-      const treeLayout = d3.tree()
-        .size([calculatedHeight, 1])
-        .separation((a, b) => (a.parent === b.parent ? 1.0 : 1.15));
-
-      treeLayout(rootNode);
+      // Determine 2-row (monitor) vs 1-row (mobile) layout
+      const isMonitor = window.innerWidth >= 960 && (window.innerWidth / window.innerHeight) >= 0.95;
+      if (layoutPreference === 'grid') {
+        currentUseGrid = true;
+      } else if (layoutPreference === 'single') {
+        currentUseGrid = false;
+      } else {
+        currentUseGrid = isMonitor && domainDataList.length > 1;
+      }
 
       // Create primary zoomable group
       treeGroup = svg.append("g").attr("class", "tree-group");
 
-      // Setup D3 pan & zoom
       zoomBehavior = d3.zoom()
-        .scaleExtent([0.35, 2.5])
+        .scaleExtent([0.3, 2.5])
         .on("zoom", (event) => {
           treeGroup.attr("transform", event.transform);
         });
@@ -545,45 +547,113 @@ Testing & Reliability
       svg.on("dblclick.zoom", null);
       svg.on("dblclick", () => fitAndCenter(true));
 
-      // Calculate compact text badge widths
+      // Temporary element to measure label text widths
       const tempGroup = svg.append("g").attr("class", "temp-measure").style("visibility", "hidden");
-      rootNode.descendants().forEach(d => {
-        if (d.depth > 0) {
+
+      // Layout each domain tree individually
+      const domainsLayout = domainDataList.map(domainData => {
+        const h = d3.hierarchy(domainData);
+
+        let leafCount = 0;
+        h.each(d => {
+          if (!d.children || d.children.length === 0) leafCount++;
+        });
+
+        const nodeVerticalGap = 24;
+        const domainHeight = Math.max(nodeVerticalGap * 1.5, leafCount * nodeVerticalGap);
+
+        const d3Tree = d3.tree()
+          .size([domainHeight, 1])
+          .separation((a, b) => (a.parent === b.parent ? 1.0 : 1.15));
+
+        d3Tree(h);
+
+        // Measure text & badge dimensions
+        h.descendants().forEach(d => {
           const tempText = tempGroup.append("text")
             .attr("font-size", "11px")
             .text(d.data.name);
           d.textWidth = tempText.node().getComputedTextLength();
           d.badgeWidth = Math.round(d.textWidth + 20);
+        });
+
+        // Compute horizontal column offsets by depth
+        const depthMaxWidth = {};
+        h.descendants().forEach(d => {
+          depthMaxWidth[d.depth] = Math.max(depthMaxWidth[d.depth] || 0, d.badgeWidth);
+        });
+
+        const maxDepth = d3.max(h.descendants(), d => d.depth) || 0;
+        const depthOffsets = { 0: 0 };
+        let currentX = 0;
+        for (let lvl = 0; lvl <= maxDepth; lvl++) {
+          depthOffsets[lvl] = currentX;
+          currentX += (depthMaxWidth[lvl] || 140) + 26;
         }
+
+        h.descendants().forEach(d => {
+          d.y = depthOffsets[d.depth];
+        });
+
+        return {
+          hierarchy: h,
+          width: currentX,
+          height: domainHeight
+        };
       });
+
       tempGroup.remove();
 
-      // Compute dynamic horizontal offsets per level based on present nodes
-      const depthMaxWidth = {};
-      rootNode.descendants().forEach(d => {
-        if (d.depth > 0) {
-          depthMaxWidth[d.depth] = Math.max(depthMaxWidth[d.depth] || 0, d.badgeWidth);
-        }
-      });
+      // Position domains in grid (2 rows for monitor) or single column (1 row for mobile)
+      const gapX = 55;
+      const gapY = 32;
 
-      const maxDepth = d3.max(rootNode.descendants(), d => d.depth) || 1;
-      const depthOffsets = { 1: 0 };
-      let currentX = 0;
-      for (let lvl = 1; lvl <= maxDepth; lvl++) {
-        depthOffsets[lvl] = currentX;
-        currentX += (depthMaxWidth[lvl] || 140) + 26; // Snug connector bridge
+      if (currentUseGrid && domainsLayout.length > 1) {
+        const numCols = Math.ceil(domainsLayout.length / 2);
+        const colWidths = [];
+        const rowHeights = [];
+
+        domainsLayout.forEach((item, i) => {
+          const r = Math.floor(i / numCols);
+          const c = i % numCols;
+          colWidths[c] = Math.max(colWidths[c] || 0, item.width);
+          rowHeights[r] = Math.max(rowHeights[r] || 0, item.height);
+        });
+
+        const colOffsets = [0];
+        for (let c = 1; c < numCols; c++) {
+          colOffsets[c] = colOffsets[c - 1] + colWidths[c - 1] + gapX;
+        }
+
+        const rowOffsets = [0];
+        for (let r = 1; r < 2; r++) {
+          rowOffsets[r] = rowOffsets[r - 1] + (rowHeights[r - 1] || 0) + gapY;
+        }
+
+        domainsLayout.forEach((item, i) => {
+          const r = Math.floor(i / numCols);
+          const c = i % numCols;
+          item.offsetX = colOffsets[c];
+          item.offsetY = rowOffsets[r];
+        });
+      } else {
+        let accumulatedY = 0;
+        domainsLayout.forEach(item => {
+          item.offsetX = 0;
+          item.offsetY = accumulatedY;
+          accumulatedY += item.height + gapY;
+        });
       }
 
-      // Reposition nodes horizontally: domain roots start at X=0
-      rootNode.descendants().forEach(d => {
-        if (d.depth > 0) {
-          d.y = depthOffsets[d.depth];
-        }
+      // Merge transformed nodes and links
+      domainsLayout.forEach(item => {
+        item.hierarchy.descendants().forEach(d => {
+          d.y += item.offsetX;
+          d.x += item.offsetY;
+          allNodes.push(d);
+        });
+        allLinks.push(...item.hierarchy.links());
       });
-
-      // Filter out the artificial root: keep only actual content nodes and links
-      const visibleNodes = rootNode.descendants().filter(d => d.depth > 0);
-      const visibleLinks = rootNode.links().filter(l => l.source.depth > 0);
 
       // Connector Links
       function horizontalLink(d) {
@@ -596,7 +666,7 @@ Testing & Reliability
       }
 
       linkSelection = treeGroup.selectAll(".link")
-        .data(visibleLinks)
+        .data(allLinks)
         .enter()
         .append("path")
         .attr("class", "link")
@@ -604,13 +674,13 @@ Testing & Reliability
 
       // Node groups
       nodeSelection = treeGroup.selectAll(".node")
-        .data(visibleNodes)
+        .data(allNodes)
         .enter()
         .append("g")
         .attr("class", d => `node level-${d.depth}`)
         .attr("transform", d => `translate(${d.y},${d.x})`);
 
-      // Compact node pill background (20px height)
+      // Node pill background
       nodeSelection.append("rect")
         .attr("class", "node-bg")
         .attr("x", -3)
@@ -618,7 +688,7 @@ Testing & Reliability
         .attr("width", d => d.badgeWidth)
         .attr("height", 20);
 
-      // Small anchor dot
+      // Node anchor dot
       nodeSelection.append("circle")
         .attr("class", "node-dot")
         .attr("cx", 4)
@@ -632,17 +702,14 @@ Testing & Reliability
         .attr("y", 0)
         .text(d => d.data.name);
 
-      // Clicking any node toggles it as an active filter chip
+      // Node click toggles filter
       nodeSelection.on("click", (event, d) => {
         event.stopPropagation();
         toggleFilter(d.data.name);
       });
 
-      allNodes = visibleNodes;
-      allLinks = visibleLinks;
-
-      // Automatically frame and center diagram in the viewport
       fitAndCenter(animate);
+      updateToggleUI();
     }
 
     // -------------------------------------------------------------
@@ -664,7 +731,7 @@ Testing & Reliability
       const vpWidth = window.innerWidth;
       const vpHeight = window.innerHeight;
 
-      // Clear space below the floating search bar at top (~85px) and around edges
+      // Spacing around edges and below the floating search bar
       const padTop = 85;
       const padBottom = 45;
       const padLeft = 45;
@@ -676,7 +743,6 @@ Testing & Reliability
       const scaleX = availWidth / diagramWidth;
       const scaleY = availHeight / diagramHeight;
 
-      // Fit diagram without excessively upscaling small single-branch trees
       let targetScale = Math.min(scaleX, scaleY, 1.05);
       targetScale = Math.max(0.35, targetScale);
 
@@ -707,6 +773,14 @@ Testing & Reliability
       const hasTokens = getActiveSearchTerms().size > 0;
       collapseBtn.classList.toggle("is-active", isCollapseActive && hasTokens);
       collapseBtn.classList.toggle("is-disabled", !hasTokens);
+
+      if (layoutToggleText) {
+        layoutToggleText.textContent = currentUseGrid ? "2 Rows" : "1 Row";
+        layoutToggleBtn.classList.toggle("is-active", currentUseGrid);
+        layoutToggleBtn.title = currentUseGrid 
+          ? "Layout: 2 Rows (Monitor). Click for 1 Row." 
+          : "Layout: 1 Row (Mobile). Click for 2 Rows.";
+      }
 
       if (!hasTokens) {
         collapseBtn.title = "Select a skill to collapse";
@@ -796,26 +870,23 @@ Testing & Reliability
         return;
       }
 
-      // Dim background nodes only when not in collapsed mode
       svg.classed("tree-dimmed", !isCollapseActive);
 
       const matchedNodes = new Set();
       const pathNodes = new Set();
       const pathLinks = new Set();
 
-      // 1. Identify all matched nodes across all active terms
       allNodes.forEach(node => {
         const nodeName = node.data.cleanName;
-        const isMatched = Array.from(searchTerms).some(term => nodeName.includes(term));
+        const isMatched = Array.from(searchTerms).some(term => nodeName && nodeName.includes(term));
         if (isMatched) {
           matchedNodes.add(node);
         }
       });
 
-      // 2. Trace ancestral path from each matched node up to top categories
       matchedNodes.forEach(node => {
         let curr = node;
-        while (curr.parent && curr.parent.depth > 0) {
+        while (curr.parent) {
           const parent = curr.parent;
           pathNodes.add(parent);
 
@@ -829,7 +900,6 @@ Testing & Reliability
         }
       });
 
-      // 3. Apply DOM classes
       nodeSelection
         .classed("is-match", d => matchedNodes.has(d))
         .classed("is-path", d => pathNodes.has(d) && !matchedNodes.has(d));
@@ -838,15 +908,20 @@ Testing & Reliability
         .classed("is-path", d => pathLinks.has(d));
     }
 
-    // Collapse toggle button listener
+    // Controls
+    layoutToggleBtn.addEventListener("click", () => {
+      layoutPreference = currentUseGrid ? 'single' : 'grid';
+      renderTree(true);
+      applyHighlight();
+    });
+
     collapseBtn.addEventListener("click", () => {
       isCollapseActive = !isCollapseActive;
       renderTree(true);
       applyHighlight();
-      updateToggleUI();
     });
 
-    // Input & Keyboard event listeners
+    // Keyboard & input handlers
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === ",") {
         e.preventDefault();
@@ -878,7 +953,7 @@ Testing & Reliability
       }
     });
 
-    // Window resize handler
+    // Responsive resize
     let resizeTimer;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
@@ -888,27 +963,26 @@ Testing & Reliability
       }, 150);
     });
 
-    // Attempt to load external 'skills.txt' if hosted on GitHub Pages/web server;
-    // gracefully fall back to DEFAULT_SKILLS_CONFIG when run locally or offline.
+    // -------------------------------------------------------------
+    // Initialization: Fetch skills.txt (with silent fallback to embedded string)
+    // -------------------------------------------------------------
     async function initApp() {
       try {
-        const response = await fetch('./skills.txt', { cache: 'no-cache' });
-        if (response.ok) {
-          const fetchedText = await response.text();
-          if (fetchedText.trim().length > 0) {
-            activeSkillsConfig = fetchedText;
+        const resp = await fetch('./skills.txt');
+        if (resp.ok) {
+          const text = await resp.text();
+          if (text.trim().length > 0) {
+            activeTaxonomyText = text;
           }
         }
       } catch (err) {
-        // Fallback to inline DEFAULT_SKILLS_CONFIG (e.g. running via file://)
+        // Silently caught on file:/// or when skills.txt is absent.
+        // Falls back to DEFAULT_SKILLS_CONFIG without console breakages.
       }
       renderTree();
     }
 
-    // Initial render
-    window.onload = () => {
-      initApp();
-    };
+    window.onload = initApp;
   </script>
 </body>
 </html>

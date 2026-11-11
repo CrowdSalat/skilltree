@@ -1,0 +1,64 @@
+Cloud-Native & Platforms
+  Base Containers
+    LXD containers
+    Podman
+    Docker
+  Orchestration
+    Kubernetes
+    Helm
+    Kustomize
+  Enterprise Platforms
+    OpenShift
+    ArgoCD GitOps
+    Tekton Pipelines
+    Service Mesh Istio
+Application Runtimes
+  Java & JVM
+    Java SE / Maven
+    Spring Boot / Hibernate
+    Quarkus / GraalVM
+    Jakarta EE / JBoss EAP
+  Go (Golang)
+    Operator SDK / Controllers
+    client-go / KubeBuilder
+    Gin / Fiber / gRPC
+    Cobra CLI / Go Modules
+  Python
+    FastAPI / Pydantic
+    LangChain / OpenShift AI
+    Celery / AsyncIO
+    Pytest / Poetry
+  TypeScript & Node
+    NestJS / Express
+    Backstage / RHDH Plugins
+    React / Next.js
+    GraphQL / REST APIs
+Integration & Messaging
+  APIs & Formats
+    REST / OpenAPI
+    gRPC
+  Message Brokers
+    ActiveMQ / AMQ
+    RabbitMQ
+  Event Streaming
+    Kafka
+    AMQ Streams
+    Debezium
+  Enterprise Integration
+    Apache Camel
+    Camel K
+Testing & Reliability
+  Unit & Core
+    JUnit 5
+    Mockito
+    AssertJ
+  Integration & Containers
+    Testcontainers
+    REST-Assured
+    WireMock
+  Architecture & Contract
+    ArchUnit
+    Pact
+  Performance Testing
+    Gatling
+    k6
