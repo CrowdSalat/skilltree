@@ -3,21 +3,28 @@ Cloud-Native & Platforms
     LXD containers
     Podman
     Docker
+    Buildah
+    Skopeo
   Orchestration
-    Kubernetes
+    Kubernetes / K8s
     Helm
     Kustomize
   Enterprise Platforms
-    OpenShift
     ArgoCD GitOps
     Tekton Pipelines
     Service Mesh Istio
+    Prometheus / Grafana / Loki / Tempo
+    Red Hat Developer Hub / Backstage
+    Red Hat Devspaces
+    Red Hat Trusted Artifact Signer
+    Red Hat Trusted Profile Analyzer
+    Red Hat Quay
 Application Runtimes
   Java & JVM
     Java SE / Maven
     Spring Boot / Hibernate
     Quarkus / GraalVM
-    Jakarta EE / JBoss EAP
+    Jakarta EE / JBoss EAP / Wildfly / WebLogic / WebSphere
   Go (Golang)
     Operator SDK / Controllers
     client-go / KubeBuilder
@@ -26,15 +33,16 @@ Application Runtimes
   Python
     FastAPI / Pydantic
     LangChain / OpenShift AI
+    Jupyter Notebook / Jupyterlab
     Celery / AsyncIO
     Pytest / Poetry
   TypeScript & Node
     NestJS / Express
     Backstage / RHDH Plugins
     React / Next.js
-    GraphQL / REST APIs
 Integration & Messaging
   APIs & Formats
+    GraphQL
     REST / OpenAPI
     gRPC
   Message Brokers
@@ -49,16 +57,18 @@ Integration & Messaging
     Camel K
 Testing & Reliability
   Unit & Core
-    JUnit 5
-    Mockito
-    AssertJ
+    JUnit 5 / Jest
+    Mockito 
+    Selenium / playwright
   Integration & Containers
     Testcontainers
     REST-Assured
     WireMock
   Architecture & Contract
     ArchUnit
-    Pact
+    Pact / Microcks
+    Cucumber
   Performance Testing
     Gatling
     k6
+    JMeter
