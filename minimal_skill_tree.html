@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Tree</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #0b0f19;
+      color: #94a3b8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Search Bar with Filter Chips */
+    .search-wrapper {
+      position: fixed;
+      top: 1.25rem;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .search-container {
+      position: relative;
+      width: 100%;
+      max-width: 620px;
+      margin: 0 1rem;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid #1e293b;
+      border-radius: 20px;
+      padding: 0.35rem 0.55rem 0.35rem 0.85rem;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-container:focus-within {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.22), 0 8px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .chips-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      align-items: center;
+    }
+
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #6ee7b7;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      white-space: nowrap;
+      animation: chipPop 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes chipPop {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .chip-remove {
+      background: none;
+      border: none;
+      color: #6ee7b7;
+      opacity: 0.7;
+      cursor: pointer;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 0 0 1px 2px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .chip-remove:hover {
+      opacity: 1;
+      color: #f87171;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 140px;
+      background: transparent;
+      border: none;
+      padding: 0.35rem 0.4rem;
+      color: #f1f5f9;
+      font-size: 0.875rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .search-input::placeholder {
+      color: #64748b;
+    }
+
+    /* Search Controls: Collapse Toggle & Clear Button */
+    .search-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .collapse-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid #334155;
+      color: #94a3b8;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 0.22rem 0.6rem;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .collapse-toggle-btn:hover {
+      background: rgba(51, 65, 85, 0.8);
+      color: #e2e8f0;
+      border-color: #475569;
+    }
+
+    .collapse-toggle-btn .toggle-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #64748b;
+      transition: all 0.2s ease;
+    }
+
+    /* Active State (When Collapsed) */
+    .collapse-toggle-btn.is-active {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: #38bdf8;
+      color: #38bdf8;
+    }
+
+    .collapse-toggle-btn.is-active .toggle-dot {
+      background-color: #38bdf8;
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
+    }
+
+    /* Disabled/Muted State (When no skill is selected) */
+    .collapse-toggle-btn.is-disabled {
+      opacity: 0.45;
+    }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 1.15rem;
+      cursor: pointer;
+      display: none;
+      padding: 0.1rem 0.3rem;
+      line-height: 1;
+      transition: color 0.15s ease;
+    }
+
+    .clear-btn:hover {
+      color: #f1f5f9;
+    }
+
+    /* Viewport & Tree Canvas */
+    #tree-viewport {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      cursor: grab;
+    }
+
+    #tree-viewport:active {
+      cursor: grabbing;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+    }
+
+    /* Connecting Lines */
+    .link {
+      fill: none;
+      stroke: #26354d;
+      stroke-width: 1.5px;
+      transition: stroke 0.25s ease, stroke-width 0.25s ease, opacity 0.25s ease;
+    }
+
+    .link.is-path {
+      stroke: #38bdf8 !important;
+      stroke-width: 2.2px !important;
+    }
+
+    /* Node Badges */
+    .node {
+      cursor: pointer;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .node-bg {
+      fill: #111827;
+      stroke: #293548;
+      stroke-width: 1px;
+      rx: 5px;
+      ry: 5px;
+      transition: fill 0.2s ease, stroke 0.2s ease;
+    }
+
+    .node:hover .node-bg {
+      stroke: #64748b;
+      fill: #1e293b;
+    }
+
+    .node-text {
+      font-size: 11px;
+      font-family: inherit;
+      fill: #cbd5e1;
+      dominant-baseline: central;
+      pointer-events: none;
+      transition: fill 0.2s ease, font-weight 0.2s ease;
+    }
+
+    .node-dot {
+      fill: #475569;
+      transition: fill 0.2s ease;
+    }
+
+    /* Highlight States */
+    /* 1. Directly Matched Node (Solid Emerald Pill, High Legibility) */
+    .node.is-match .node-bg {
+      fill: #064e3b !important;
+      stroke: #10b981 !important;
+      stroke-width: 2px !important;
+    }
+    .node.is-match .node-text {
+      fill: #ffffff !important;
+      font-weight: 700 !important;
+    }
+    .node.is-match .node-dot {
+      fill: #34d399 !important;
+    }
+
+    /* 2. Ancestral Lineage Node (Crisp Slate-Cyan Accent) */
+    .node.is-path .node-bg {
+      fill: #0c4a6e !important;
+      stroke: #38bdf8 !important;
+      stroke-width: 1.5px !important;
+    }
+    .node.is-path .node-text {
+      fill: #f0f9ff !important;
+      font-weight: 600 !important;
+    }
+    .node.is-path .node-dot {
+      fill: #38bdf8 !important;
+    }
+
+    /* 3. Balanced Contrast for Non-Selected Nodes:
+          Remains fully legible (~65% opacity), brightens to 100% on hover */
+    .tree-dimmed .node:not(.is-match):not(.is-path) {
+      opacity: 0.65;
+    }
+    .tree-dimmed .node:not(.is-match):not(.is-path):hover {
+      opacity: 1;
+    }
+    .tree-dimmed .link:not(.is-path) {
+      opacity: 0.4;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Single Top Search Bar -->
+  <div class="search-wrapper">
+    <div class="search-container" id="search-container">
+      <div id="chips-container" class="chips-container"></div>
+      <input 
+        type="text" 
+        id="search-input" 
+        class="search-input" 
+        placeholder="Type buzzword & press Enter, or click nodes..." 
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <div class="search-actions">
+        <button id="collapse-toggle" class="collapse-toggle-btn is-disabled" type="button" title="Select a skill to collapse">
+          <span class="toggle-dot"></span>
+          <span class="toggle-text">Collapse</span>
+        </button>
+        <button id="clear-btn" class="clear-btn" title="Clear all filters">&times;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unified Tree Viewport -->
+  <div id="tree-viewport">
+    <svg id="tree-svg"></svg>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // Easily configurable indented skill hierarchy
+    // (2 spaces per depth level)
+    // -------------------------------------------------------------
+    const DEFAULT_SKILLS_CONFIG = `
+Cloud-Native & Platforms
+  Base Containers
+    Linux CLI
+    Podman
+    Docker
+  Orchestration
+    Kubernetes
+    Helm
+    Kustomize
+  Enterprise Platforms
+    OpenShift
+    ArgoCD GitOps
+    Tekton Pipelines
+    Service Mesh Istio
+Application Runtimes
+  Java & JVM
+    Java SE / Maven
+    Spring Boot / Hibernate
+    Quarkus / GraalVM
+    Jakarta EE / JBoss EAP
+  Go (Golang)
+    Operator SDK / Controllers
+    client-go / KubeBuilder
+    Gin / Fiber / gRPC
+    Cobra CLI / Go Modules
+  Python
+    FastAPI / Pydantic
+    LangChain / OpenShift AI
+    Celery / AsyncIO
+    Pytest / Poetry
+  TypeScript & Node
+    NestJS / Express
+    Backstage / RHDH Plugins
+    React / Next.js
+    GraphQL / REST APIs
+Integration & Messaging
+  APIs & Formats
+    REST / OpenAPI
+    gRPC
+  Message Brokers
+    ActiveMQ / AMQ
+    RabbitMQ
+  Event Streaming
+    Kafka
+    AMQ Streams
+    Debezium
+  Enterprise Integration
+    Apache Camel
+    Camel K
+Testing & Reliability
+  Unit & Core
+    JUnit 5
+    Mockito
+    AssertJ
+  Integration & Containers
+    Testcontainers
+    REST-Assured
+    WireMock
+  Architecture & Contract
+    ArchUnit
+    Pact
+  Performance Testing
+    Gatling
+    k6
+`;
+
+    // Active configuration text (loaded from skills.txt or defaults to inline)
+    let activeSkillsConfig = DEFAULT_SKILLS_CONFIG;
+
+    // -------------------------------------------------------------
+    // Hierarchy Parser: Indented Text -> Tree Data Structure
+    // -------------------------------------------------------------
+    function parseIndentedTree(text, rootLabel = "Skills") {
+      const lines = text.split('\n').filter(line => line.trim().length > 0);
+      const root = { name: rootLabel, children: [], level: -1, id: "root" };
+      const stack = [root];
+      let idSequence = 1;
+
+      for (const line of lines) {
+        const indentMatch = line.match(/^(\s*)/);
+        const indent = indentMatch ? indentMatch[1].length : 0;
+        const level = Math.floor(indent / 2);
+        const name = line.trim();
+
+        const node = {
+          id: 'node_' + (idSequence++),
+          name: name,
+          cleanName: name.toLowerCase(),
+          level: level,
+          children: []
+        };
+
+        while (stack.length > 1 && stack[stack.length - 1].level >= level) {
+          stack.pop();
+        }
+
+        const parent = stack[stack.length - 1];
+        parent.children.push(node);
+        stack.push(node);
+      }
+
+      return root;
+    }
+
+    // -------------------------------------------------------------
+    // D3 Unified Tree Rendering & Multi-Filter State
+    // -------------------------------------------------------------
+    const viewport = document.getElementById('tree-viewport');
+    const svg = d3.select("#tree-svg");
+    const searchInput = document.getElementById("search-input");
+    const chipsContainer = document.getElementById("chips-container");
+    const clearBtn = document.getElementById("clear-btn");
+    const collapseBtn = document.getElementById("collapse-toggle");
+
+    let rootNode, allNodes, allLinks;
+    let nodeSelection, linkSelection;
+    let zoomBehavior, treeGroup;
+
+    // Active multi-skill filters & collapse state
+    const activeFilters = new Set();
+    let isCollapseActive = false;
+
+    // -------------------------------------------------------------
+    // Tree Pruning Logic: Keeps only selected skills & their lineages
+    // -------------------------------------------------------------
+    function getActiveSearchTerms() {
+      const liveQuery = searchInput.value.trim().toLowerCase();
+      const searchTerms = new Set(activeFilters);
+      if (liveQuery) {
+        liveQuery.split(/[\s,]+/).filter(t => t.length > 0).forEach(t => searchTerms.add(t));
+      }
+      return searchTerms;
+    }
+
+    function pruneTree(node, searchTerms, ancestorMatched = false) {
+      const isDirectMatch = Array.from(searchTerms).some(term => 
+        node.cleanName && node.cleanName.includes(term)
+      );
+      const selfMatches = isDirectMatch || ancestorMatched;
+
+      let validChildren = [];
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          const prunedChild = pruneTree(child, searchTerms, selfMatches);
+          if (prunedChild !== null) {
+            validChildren.push(prunedChild);
+          }
+        }
+      }
+
+      if (node.id === "root" || isDirectMatch || ancestorMatched || validChildren.length > 0) {
+        return {
+          ...node,
+          children: validChildren,
+          isDirectMatch: isDirectMatch
+        };
+      }
+
+      return null;
+    }
+
+    function renderTree(animate = false) {
+      svg.selectAll("*").remove();
+
+      const rawTree = parseIndentedTree(activeSkillsConfig);
+      const searchTerms = getActiveSearchTerms();
+      const hasTokens = searchTerms.size > 0;
+      const shouldCollapse = isCollapseActive && hasTokens;
+
+      let treeSource = rawTree;
+      if (shouldCollapse) {
+        const pruned = pruneTree(rawTree, searchTerms);
+        if (pruned && pruned.children && pruned.children.length > 0) {
+          treeSource = pruned;
+        }
+      }
+
+      rootNode = d3.hierarchy(treeSource);
+
+      // Count terminal leaves across domain roots to allocate vertical height
+      let leafCount = 0;
+      rootNode.each(d => {
+        if (d.depth > 0 && (!d.children || d.children.length === 0)) leafCount++;
+      });
+
+      // Compact spacing: when collapsed, rows nest right next to each other
+      const nodeVerticalGap = 24;
+      const calculatedHeight = Math.max(nodeVerticalGap * 2, leafCount * nodeVerticalGap);
+
+      const treeLayout = d3.tree()
+        .size([calculatedHeight, 1])
+        .separation((a, b) => (a.parent === b.parent ? 1.0 : 1.15));
+
+      treeLayout(rootNode);
+
+      // Create primary zoomable group
+      treeGroup = svg.append("g").attr("class", "tree-group");
+
+      // Setup D3 pan & zoom
+      zoomBehavior = d3.zoom()
+        .scaleExtent([0.35, 2.5])
+        .on("zoom", (event) => {
+          treeGroup.attr("transform", event.transform);
+        });
+
+      svg.call(zoomBehavior);
+      svg.on("dblclick.zoom", null);
+      svg.on("dblclick", () => fitAndCenter(true));
+
+      // Calculate compact text badge widths
+      const tempGroup = svg.append("g").attr("class", "temp-measure").style("visibility", "hidden");
+      rootNode.descendants().forEach(d => {
+        if (d.depth > 0) {
+          const tempText = tempGroup.append("text")
+            .attr("font-size", "11px")
+            .text(d.data.name);
+          d.textWidth = tempText.node().getComputedTextLength();
+          d.badgeWidth = Math.round(d.textWidth + 20);
+        }
+      });
+      tempGroup.remove();
+
+      // Compute dynamic horizontal offsets per level based on present nodes
+      const depthMaxWidth = {};
+      rootNode.descendants().forEach(d => {
+        if (d.depth > 0) {
+          depthMaxWidth[d.depth] = Math.max(depthMaxWidth[d.depth] || 0, d.badgeWidth);
+        }
+      });
+
+      const maxDepth = d3.max(rootNode.descendants(), d => d.depth) || 1;
+      const depthOffsets = { 1: 0 };
+      let currentX = 0;
+      for (let lvl = 1; lvl <= maxDepth; lvl++) {
+        depthOffsets[lvl] = currentX;
+        currentX += (depthMaxWidth[lvl] || 140) + 26; // Snug connector bridge
+      }
+
+      // Reposition nodes horizontally: domain roots start at X=0
+      rootNode.descendants().forEach(d => {
+        if (d.depth > 0) {
+          d.y = depthOffsets[d.depth];
+        }
+      });
+
+      // Filter out the artificial root: keep only actual content nodes and links
+      const visibleNodes = rootNode.descendants().filter(d => d.depth > 0);
+      const visibleLinks = rootNode.links().filter(l => l.source.depth > 0);
+
+      // Connector Links
+      function horizontalLink(d) {
+        const startX = d.source.y + (d.source.badgeWidth - 3);
+        const startY = d.source.x;
+        const endX = d.target.y - 3;
+        const endY = d.target.x;
+        const midX = (startX + endX) / 2;
+        return `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
+      }
+
+      linkSelection = treeGroup.selectAll(".link")
+        .data(visibleLinks)
+        .enter()
+        .append("path")
+        .attr("class", "link")
+        .attr("d", horizontalLink);
+
+      // Node groups
+      nodeSelection = treeGroup.selectAll(".node")
+        .data(visibleNodes)
+        .enter()
+        .append("g")
+        .attr("class", d => `node level-${d.depth}`)
+        .attr("transform", d => `translate(${d.y},${d.x})`);
+
+      // Compact node pill background (20px height)
+      nodeSelection.append("rect")
+        .attr("class", "node-bg")
+        .attr("x", -3)
+        .attr("y", -10)
+        .attr("width", d => d.badgeWidth)
+        .attr("height", 20);
+
+      // Small anchor dot
+      nodeSelection.append("circle")
+        .attr("class", "node-dot")
+        .attr("cx", 4)
+        .attr("cy", 0)
+        .attr("r", 2);
+
+      // Node text label
+      nodeSelection.append("text")
+        .attr("class", "node-text")
+        .attr("x", 12)
+        .attr("y", 0)
+        .text(d => d.data.name);
+
+      // Clicking any node toggles it as an active filter chip
+      nodeSelection.on("click", (event, d) => {
+        event.stopPropagation();
+        toggleFilter(d.data.name);
+      });
+
+      allNodes = visibleNodes;
+      allLinks = visibleLinks;
+
+      // Automatically frame and center diagram in the viewport
+      fitAndCenter(animate);
+    }
+
+    // -------------------------------------------------------------
+    // Recenter & Fit Diagram in Viewport
+    // -------------------------------------------------------------
+    function fitAndCenter(animate = false) {
+      if (!allNodes || allNodes.length === 0) return;
+
+      const minX = d3.min(allNodes, d => d.y - 3) ?? 0;
+      const maxX = d3.max(allNodes, d => d.y - 3 + d.badgeWidth) ?? 200;
+      const minY = d3.min(allNodes, d => d.x - 10) ?? 0;
+      const maxY = d3.max(allNodes, d => d.x + 10) ?? 200;
+
+      const diagramWidth = Math.max(1, maxX - minX);
+      const diagramHeight = Math.max(1, maxY - minY);
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      const vpWidth = window.innerWidth;
+      const vpHeight = window.innerHeight;
+
+      // Clear space below the floating search bar at top (~85px) and around edges
+      const padTop = 85;
+      const padBottom = 45;
+      const padLeft = 45;
+      const padRight = 45;
+
+      const availWidth = Math.max(50, vpWidth - padLeft - padRight);
+      const availHeight = Math.max(50, vpHeight - padTop - padBottom);
+
+      const scaleX = availWidth / diagramWidth;
+      const scaleY = availHeight / diagramHeight;
+
+      // Fit diagram without excessively upscaling small single-branch trees
+      let targetScale = Math.min(scaleX, scaleY, 1.05);
+      targetScale = Math.max(0.35, targetScale);
+
+      const vpCenterX = padLeft + availWidth / 2;
+      const vpCenterY = padTop + availHeight / 2;
+
+      const transX = vpCenterX - centerX * targetScale;
+      const transY = vpCenterY - centerY * targetScale;
+
+      const targetTransform = d3.zoomIdentity.translate(transX, transY).scale(targetScale);
+
+      const currentTransform = d3.zoomTransform(svg.node());
+      if (animate && currentTransform) {
+        treeGroup.attr("transform", currentTransform);
+        svg.transition()
+          .duration(380)
+          .ease(d3.easeCubicOut)
+          .call(zoomBehavior.transform, targetTransform);
+      } else {
+        svg.call(zoomBehavior.transform, targetTransform);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Filter Chips & Multi-Skill Highlighting Logic
+    // -------------------------------------------------------------
+    function updateToggleUI() {
+      const hasTokens = getActiveSearchTerms().size > 0;
+      collapseBtn.classList.toggle("is-active", isCollapseActive && hasTokens);
+      collapseBtn.classList.toggle("is-disabled", !hasTokens);
+
+      if (!hasTokens) {
+        collapseBtn.title = "Select a skill to collapse";
+      } else if (isCollapseActive) {
+        collapseBtn.title = "Expand all branches";
+      } else {
+        collapseBtn.title = "Collapse unselected branches";
+      }
+    }
+
+    function addFilter(term) {
+      const clean = term.trim();
+      if (!clean) return;
+
+      activeFilters.add(clean.toLowerCase());
+      searchInput.value = "";
+      renderChips();
+      if (isCollapseActive) {
+        renderTree(true);
+      }
+      applyHighlight();
+      updateToggleUI();
+    }
+
+    function removeFilter(term) {
+      activeFilters.delete(term.toLowerCase());
+      renderChips();
+      if (isCollapseActive) {
+        renderTree(true);
+      }
+      applyHighlight();
+      updateToggleUI();
+    }
+
+    function toggleFilter(term) {
+      const lower = term.toLowerCase();
+      if (activeFilters.has(lower)) {
+        activeFilters.delete(lower);
+      } else {
+        activeFilters.add(lower);
+      }
+      renderChips();
+      if (isCollapseActive) {
+        renderTree(true);
+      }
+      applyHighlight();
+      updateToggleUI();
+    }
+
+    function clearAllFilters() {
+      activeFilters.clear();
+      searchInput.value = "";
+      renderChips();
+      renderTree(true);
+      applyHighlight();
+      updateToggleUI();
+    }
+
+    function renderChips() {
+      chipsContainer.innerHTML = "";
+      activeFilters.forEach(filter => {
+        const chip = document.createElement("span");
+        chip.className = "filter-chip";
+        chip.innerHTML = `${filter} <button class="chip-remove" title="Remove">&times;</button>`;
+        chip.querySelector(".chip-remove").addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeFilter(filter);
+        });
+        chipsContainer.appendChild(chip);
+      });
+
+      searchInput.placeholder = activeFilters.size > 0 
+        ? "Add more..." 
+        : "Type buzzword & press Enter, or click nodes...";
+    }
+
+    function applyHighlight() {
+      const searchTerms = getActiveSearchTerms();
+      const hasTokens = searchTerms.size > 0;
+
+      clearBtn.style.display = hasTokens ? "block" : "none";
+
+      if (!hasTokens) {
+        svg.classed("tree-dimmed", false);
+        nodeSelection.classed("is-match", false).classed("is-path", false);
+        linkSelection.classed("is-path", false);
+        return;
+      }
+
+      // Dim background nodes only when not in collapsed mode
+      svg.classed("tree-dimmed", !isCollapseActive);
+
+      const matchedNodes = new Set();
+      const pathNodes = new Set();
+      const pathLinks = new Set();
+
+      // 1. Identify all matched nodes across all active terms
+      allNodes.forEach(node => {
+        const nodeName = node.data.cleanName;
+        const isMatched = Array.from(searchTerms).some(term => nodeName.includes(term));
+        if (isMatched) {
+          matchedNodes.add(node);
+        }
+      });
+
+      // 2. Trace ancestral path from each matched node up to top categories
+      matchedNodes.forEach(node => {
+        let curr = node;
+        while (curr.parent && curr.parent.depth > 0) {
+          const parent = curr.parent;
+          pathNodes.add(parent);
+
+          allLinks.forEach(link => {
+            if (link.source === parent && link.target === curr) {
+              pathLinks.add(link);
+            }
+          });
+
+          curr = parent;
+        }
+      });
+
+      // 3. Apply DOM classes
+      nodeSelection
+        .classed("is-match", d => matchedNodes.has(d))
+        .classed("is-path", d => pathNodes.has(d) && !matchedNodes.has(d));
+
+      linkSelection
+        .classed("is-path", d => pathLinks.has(d));
+    }
+
+    // Collapse toggle button listener
+    collapseBtn.addEventListener("click", () => {
+      isCollapseActive = !isCollapseActive;
+      renderTree(true);
+      applyHighlight();
+      updateToggleUI();
+    });
+
+    // Input & Keyboard event listeners
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        if (searchInput.value.trim()) {
+          addFilter(searchInput.value.replace(/,/g, ""));
+        }
+      } else if (e.key === "Backspace" && searchInput.value === "" && activeFilters.size > 0) {
+        const arr = Array.from(activeFilters);
+        removeFilter(arr[arr.length - 1]);
+      }
+    });
+
+    searchInput.addEventListener("input", () => {
+      if (isCollapseActive) {
+        renderTree();
+      }
+      applyHighlight();
+      updateToggleUI();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      clearAllFilters();
+      searchInput.focus();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        clearAllFilters();
+      }
+    });
+
+    // Window resize handler
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        renderTree();
+        applyHighlight();
+      }, 150);
+    });
+
+    // Attempt to load external 'skills.txt' if hosted on GitHub Pages/web server;
+    // gracefully fall back to DEFAULT_SKILLS_CONFIG when run locally or offline.
+    async function initApp() {
+      try {
+        const response = await fetch('./skills.txt', { cache: 'no-cache' });
+        if (response.ok) {
+          const fetchedText = await response.text();
+          if (fetchedText.trim().length > 0) {
+            activeSkillsConfig = fetchedText;
+          }
+        }
+      } catch (err) {
+        // Fallback to inline DEFAULT_SKILLS_CONFIG (e.g. running via file://)
+      }
+      renderTree();
+    }
+
+    // Initial render
+    window.onload = () => {
+      initApp();
+    };
+  </script>
+</body>
+</html>
